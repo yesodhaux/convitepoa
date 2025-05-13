@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Enviar Nome com Verificação Robusta</title>
+</head>
+<body>
+  <h2>Formulário com Verificação</h2>
+  <form id="formNome">
+    <label>Nome: <input type="text" id="nome" required></label><br>
+    <button type="submit">Enviar</button>
+  </form>
+  <p id="status"></p>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbzHFSTdp-bMBVzJZXJd46pw00uoI0bhbPuUSEqRq7wZuJX-EyUKGJP2MGIujNPpBOrA/exec"; // MANTENHA A SUA URL
+    const sheetID = "1rciT4XRsTDWRngs_pZYJH4dVSSjd_knPg1c73NShKjI"; // MANTENHA O SEU ID DA PLANILHA
+    const apiKey = "AIzaSyDEfv-br2uswAz4-oPK_ZTXFsholEFqoOQ"; // MANTENHA A SUA API KEY
+    const sheetName = "Página1"; // MANTENHA O NOME DA SUA ABA/PÁGINA
+
+    document.getElementById("formNome").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const nome = document.getElementById("nome").value.trim();
+      document.getElementById("status").innerText = "Enviando...";
+
+      if (!nome) {
+        document.getElementById("status").innerText = "❌ Nome não pode ser vazio.";
+        return;
+      }
+
+      const formData = new URLSearchParams();
+      formData.append("nome", nome);
+
+      let tentativas = 0;
+      const maxTentativas = 5;
+
+      const verificar = async () => {
+        tentativas++;
+        console.log(`Verificação TENTATIVA ${tentativas} para o nome: "${nome}"`);
+        const urlVerificacao = `https://sheets.googleapis.com/v4/spreadsheets/${sheetID}/values/${encodeURIComponent(sheetName)}!A:A?key=${apiKey}`;
+
+        try {
+          const response = await fetch(urlVerificacao);
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Erro na API do Sheets ao verificar:", response.status, errorText);
+            if (tentativas < maxTentativas) {
+              document.getElementById("status").innerText = `Tentando verificar (${tentativas}/${maxTentativas}). Erro API: ${response.status}`;
+              setTimeout(verificar, 3000); // Intervalo entre tentativas
+            } else {
+              document.getElementById("status").innerText = "❌ Falha ao verificar (erro de API após tentativas).";
+            }
+            return;
+          }
+
+          const data = await response.json();
+          console.log("Dados recebidos da API:", JSON.stringify(data, null, 2));
+
+          const valores = data.values || [];
+          let ultima = "";
+
+          for (let i = valores.length - 1; i >= 0; i--) {
+            if (valores[i] && valores[i][0] !== null && valores[i][0] !== undefined && String(valores[i][0]).trim() !== "") {
+              ultima = String(valores[i][0]).trim();
+              console.log(`Último valor encontrado na linha ${i} da planilha: "'${ultima}'" (tipo: ${typeof ultima})`);
+              break;
+            }
+          }
+          
+          console.log(`Comparando: "'${ultima.toLowerCase()}'" (planilha) com "'${nome.toLowerCase()}'" (formulário)`);
+
+          if (ultima.toLowerCase() === nome.toLowerCase()) {
+            document.getElementById("status").innerText = "✅ Nome adicionado com sucesso!";
+            console.log("VERIFICAÇÃO BEM SUCEDIDA!");
+          } else if (tentativas < maxTentativas) {
+            document.getElementById("status").innerText = `Aguardando confirmação (${tentativas}/${maxTentativas}). Encontrado: '${ultima || "nada"}'. Esperado: '${nome}'.`;
+            console.log("Nomes não batem ou nome ainda não propagado, tentando novamente...");
+            setTimeout(verificar, 3000); // Intervalo entre tentativas
+          } else {
+            document.getElementById("status").innerText = `❌ Falha ao confirmar. Planilha: '${ultima || "nada"}', Esperado: '${nome}'.`;
+            console.log("Falha na verificação após todas as tentativas.");
+          }
+        } catch (err) {
+          console.error("Erro dentro da função verificar:", err);
+          if (tentativas < maxTentativas) {
+            document.getElementById("status").innerText = `Tentando verificar (${tentativas}/${maxTentativas}). Erro interno.`;
+            setTimeout(verificar, 3000);
+          } else {
+            document.getElementById("status").innerText = "❌ Erro interno durante a verificação após tentativas.";
+          }
+        }
+      };
+
+      try {
+        await fetch(scriptURL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: formData.toString()
+        });
+        // Se o POST foi bem-sucedido (não necessariamente significa que já foi processado pelo Apps Script e gravado)
+        // Inicia a verificação após um tempo inicial
+        document.getElementById("status").innerText = "Enviado. Verificando...";
+        setTimeout(verificar, 3000); // Delay inicial para a primeira verificação
+
+      } catch (err) {
+        document.getElementById("status").innerText = "❌ Erro ao enviar dados.";
+        console.error("Erro no POST para Apps Script:", err);
+      }
+
+      document.getElementById("formNome").reset();
+    });
+  </script>
+</body>
+</html>

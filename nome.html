@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Enviar Nome</title>
+</head>
+<body>
+  <h2>Adicionar Nome</h2>
+  <form id="formNome">
+    <label>Nome: <input type="text" id="nome" required></label><br>
+    <button type="submit">Enviar</button>
+  </form>
+
+  <p id="resposta"></p>
+
+  <script>
+    document.getElementById('formNome').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const nome = document.getElementById('nome').value;
+
+      const formData = new URLSearchParams();
+      formData.append("nome", nome);
+
+      fetch("https://script.google.com/macros/s/AKfycbzW-ZMjkWubD-oTlchghRoQUgCO3QiIW7mwE_nL_s7fDp5XFcEmlaCjsYsMJ1Fm9Iyy/exec", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: formData.toString()
+      })
+      .then(response => response.text())
+      .then(text => {
+        document.getElementById("resposta").innerText = text;
+        document.getElementById("formNome").reset();
+      })
+      .catch(err => {
+        document.getElementById("resposta").innerText = "Erro ao enviar.";
+        console.error(err);
+      });
+    });
+  </script>
+</body>
+</htm

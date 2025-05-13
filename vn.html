@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Enviar Nome com Logs e no-cors</title>
+</head>
+<body>
+  <h2>Formulário com Verificação Final</h2>
+  <form id="formNome">
+    <label>Nome: <input type="text" id="nome" required></label><br>
+    <button type="submit">Enviar</button>
+  </form>
+  <p id="status"></p>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbzHFSTdp-bMBVzJZXJd46pw00uoI0bhbPuUSEqRq7wZuJX-EyUKGJP2MGIujNPpBOrA/exec";
+    const sheetID = "1rciT4XRsTDWRngs_pZYJH4dVSSjd_knPg1c73NShKjI";
+    const apiKey = "AIzaSyDEfv-br2uswAz4-oPK_ZTXFsholEFqoOQ";
+    const sheetName = "Página1";
+
+    document.getElementById("formNome").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const nome = document.getElementById("nome").value.trim();
+      document.getElementById("status").innerText = "Enviando...";
+      console.log("Nome enviado:", nome);
+
+      const formData = new URLSearchParams();
+      formData.append("nome", nome);
+
+      try {
+        await fetch(scriptURL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: formData.toString()
+        });
+
+        let tentativas = 0;
+        const maxTentativas = 5;
+
+        const verificar = async () => {
+          tentativas++;
+          const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetID}/values/${sheetName}!A:A?key=${apiKey}`;
+          const response = await fetch(url);
+          const data = await response.json();
+          const valores = data.values || [];
+
+          let ultima = "";
+          for (let i = valores.length - 1; i >= 0; i--) {
+            if (valores[i][0]) {
+              ultima = valores[i][0];
+              break;
+            }
+          }
+
+          console.log("Última linha lida:", ultima);
+
+          if (ultima.toLowerCase().trim() === nome.toLowerCase().trim()) {
+            document.getElementById("status").innerText = "✅ Nome adicionado com sucesso!";
+          } else if (tentativas < maxTentativas) {
+            setTimeout(verificar, 2000);
+          } else {
+            document.getElementById("status").innerText = "❌ Falha ao confirmar inserção.";
+          }
+        };
+
+        setTimeout(verificar, 2000);
+      } catch (err) {
+        document.getElementById("status").innerText = "❌ Erro ao enviar.";
+        console.error(err);
+      }
+
+      document.getElementById("formNome").reset();
+    });
+  </script>
+</body>
+</html>

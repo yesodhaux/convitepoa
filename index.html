@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:image" content="https://yesodhaux.github.io/convite/tumb.jpg" />
+    <meta property="og:title" content="Leeana em sua primeira volta ao sol" />
+    <meta property="og:description" content="Você está convidado para a celebração!" />
+    <meta property="og:url" content="https://lee.syte.net" />
+
+    <title>Leeana em sua primeira volta ao sol</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body onclick="forcarFullscreen(event)">
+
+<div class="container" id="pagina">
+    <div class="intro" id="intro">
+        <div class="sol" onclick="revelarPagina(event)"></div>
+    </div>
+
+    <img src="CONVITE.png" alt="Convite" class="convite-img">
+
+    <div class="botoes">
+        <div class="botoes-informacoes">SÁBADO 24 MAIO<br>17:00H</div>
+        <a href="#" class="botao" id="confirmarPresenca">Confirmar Presença</a>
+        <a href="#" class="botao" id="verLocalizacao">Ver Localização</a>
+        <a href="#" class="botao" id="listaPresentes">Lista de Presentes</a>
+    </div>
+</div>
+
+<script>
+    function entrarEmTelaCheia() {
+        const el = document.documentElement;
+        if (!document.fullscreenElement) {
+            if (el.requestFullscreen) {
+                el.requestFullscreen();
+            } else if (el.webkitRequestFullscreen) {
+                el.webkitRequestFullscreen();
+            } else if (el.msRequestFullscreen) {
+                el.msRequestFullscreen();
+            }
+        }
+    }
+
+    function revelarPagina(event) {
+        event.stopPropagation();
+        entrarEmTelaCheia();
+        document.getElementById('intro').classList.add('hide');
+        document.getElementById('pagina').classList.add('reveal');
+    }
+
+    function forcarFullscreen(event) {
+        entrarEmTelaCheia();
+    }
+
+    function clicarComFullscreen(callback) {
+        entrarEmTelaCheia();
+        setTimeout(callback, 100);
+    }
+
+    document.getElementById('confirmarPresenca').onclick = function(event) {
+        event.preventDefault();
+        clicarComFullscreen(() => {
+            const widget = document.createElement('div');
+            widget.classList.add('form-widget');
+            widget.style.position = 'fixed';
+            widget.style.top = '0';
+            widget.style.left = '0';
+            widget.style.width = '100%';
+            widget.style.height = '100%';
+            widget.style.background = 'rgba(0, 0, 0, 0.3)';
+            widget.style.display = 'flex';
+            widget.style.alignItems = 'center';
+            widget.style.justifyContent = 'center';
+            widget.style.zIndex = '20';
+            widget.innerHTML = `
+                <div style="position: relative; background: white; padding: 30px 20px; border-radius: 15px; box-shadow: 0 0 15px rgba(0,0,0,0.2); max-width: 300px; width: 90%; text-align: center;">
+                    <button id="fecharWidget" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 20px; color: #856040; cursor: pointer;">&times;</button>
+                    <form id="formNome" style="display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 20px;">
+                        <label style="font-size: 18px; color: #856040;">Digite seu nome:</label>
+                        <input type="text" id="nome" required style="padding: 10px; border-radius: 10px; border: 1px solid #ccc; width: 100%;">
+                        <button type="submit" style="padding: 10px 20px; background-color: #856040; color: white; border: none; border-radius: 10px; cursor: pointer;">Confirmar</button>
+                        <p id="status" style="margin-top: 10px; color: #333;"></p>
+                    </form>
+                </div>
+            `;
+            document.body.appendChild(widget);
+            widget.classList.add('fade-in');
+
+            document.getElementById("fecharWidget").addEventListener("click", function() {
+                widget.classList.remove('fade-in');
+                widget.classList.add('fade-out');
+                setTimeout(() => {
+                    document.body.removeChild(widget);
+                }, 300);
+            });
+
+            const scriptURL = "https://script.google.com/macros/s/AKfycbzHFSTdp-bMBVzJZXJd46pw00uoI0bhbPuUSEqRq7wZuJX-EyUKGJP2MGIujNPpBOrA/exec";
+            const sheetID = "1rciT4XRsTDWRngs_pZYJH4dVSSjd_knPg1c73NShKjI";
+            const apiKey = "AIzaSyDEfv-br2uswAz4-oPK_ZTXFsholEFqoOQ";
+            const sheetName = "Página1";
+
+            document.getElementById("formNome").addEventListener("submit", async function(e) {
+                e.preventDefault();
+                const nome = document.getElementById("nome").value.trim();
+                document.getElementById("status").innerText = "Enviando...";
+
+                const formData = new URLSearchParams();
+                formData.append("nome", nome);
+
+                try {
+                    await fetch(scriptURL, {
+                        method: "POST",
+                        mode: "no-cors",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded"
+                        },
+                        body: formData.toString()
+                    });
+
+                    let tentativas = 0;
+                    const maxTentativas = 5;
+
+                    const verificar = async () => {
+                        tentativas++;
+                        const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetID}/values/${sheetName}!A:A?key=${apiKey}`;
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        const valores = data.values || [];
+
+                        let ultima = "";
+                        for (let i = valores.length - 1; i >= 0; i--) {
+                            if (valores[i][0]) {
+                                ultima = valores[i][0];
+                                break;
+                            }
+                        }
+
+                        if (ultima.toLowerCase().trim() === nome.toLowerCase().trim()) {
+                            document.getElementById("status").innerText = "☀️ Lee aguardamos!";
+                        } else if (tentativas < maxTentativas) {
+                            setTimeout(verificar, 2000);
+                        } else {
+                            document.getElementById("status").innerText = "❌ Falha ao confirmar inserção.";
+                        }
+                    };
+
+                    setTimeout(verificar, 2000);
+                } catch (err) {
+                    document.getElementById("status").innerText = "❌ Erro ao enviar.";
+                    console.error(err);
+                }
+
+                document.getElementById("formNome").reset();
+            });
+        });
+    };
+
+    document.getElementById('verLocalizacao').onclick = function(event) {
+        event.preventDefault();
+        clicarComFullscreen(() => {
+            window.location.href = 'https://maps.app.goo.gl/e5avu1uHaVgbTfJU7';
+        });
+    };
+
+    document.getElementById('listaPresentes').onclick = function(event) {
+        event.preventDefault();
+        clicarComFullscreen(() => {
+            window.location.href = 'https://www.mercadolivre.com.br/presentes/aniversario-lee-1-aninho-4jqih';
+        });
+    };
+</script>
+
+</body>
+</html>
